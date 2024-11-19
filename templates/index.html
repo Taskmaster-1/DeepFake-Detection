@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deepfake Detection</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.6.2/axios.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 min-h-screen p-8">
+    <div class="max-w-3xl mx-auto">
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h1 class="text-2xl font-bold mb-6 text-center">Deepfake Detection</h1>
+            
+            <form id="uploadForm" class="space-y-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Upload Image</label>
+                    <input type="file" id="testImage" accept="image/*" required
+                           class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+
+                <div class="flex justify-center">
+                    <button type="submit" 
+                            class="inline-flex items-center px-4 py-2 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                        Detect Deepfake
+                    </button>
+                </div>
+            </form>
+
+            <div id="result" class="mt-6 hidden">
+                <div class="border rounded-lg p-4">
+                    <h2 class="text-lg font-semibold mb-2">Detection Result</h2>
+                    <div id="resultContent" class="space-y-2"></div>
+                </div>
+            </div>
+
+            <div id="error" class="mt-6 hidden">
+                <div class="border border-red-200 rounded-lg p-4 bg-red-50 text-red-700">
+                    <h2 class="text-lg font-semibold mb-2">Error</h2>
+                    <div id="errorContent"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const formData = new FormData();
+            const testImage = document.getElementById('testImage').files[0];
+
+            if (!testImage) {
+                showError('Please select an image.');
+                return;
+            }
+
+            formData.append('test_image', testImage);
+
+            try {
+                const response = await axios.post('/detect', formData, {
+                    headers: { 'Content-Type': 'multipart/form-data' }
+                });
+
+                showResult(response.data);
+            } catch (error) {
+                showError(error.response?.data?.error || 'An error occurred during detection.');
+            }
+        });
+
+        function showResult(data) {
+            const resultDiv = document.getElementById('result');
+            const resultContent = document.getElementById('resultContent');
+            const errorDiv = document.getElementById('error');
+
+            errorDiv.classList.add('hidden');
+            resultDiv.classList.remove('hidden');
+
+            const confidence = (data.confidence * 100).toFixed(1);
+            const resultClass = data.is_fake ? 'text-red-600' : 'text-green-600';
+            const resultText = data.is_fake ? 'Likely Deepfake' : 'Likely Authentic';
+
+            resultContent.innerHTML = `
+                <p class="text-lg ${resultClass} font-bold">${resultText}</p>
+                <p>Confidence: ${confidence}%</p>
+                <p class="text-sm text-gray-600 mt-2">Score: ${data.score.toFixed(3)}</p>
+            `;
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            const errorContent = document.getElementById('errorContent');
+            const resultDiv = document.getElementById('result');
+
+            resultDiv.classList.add('hidden');
+            errorDiv.classList.remove('hidden');
+            errorContent.textContent = message;
+        }
+    </script>
+</body>
+</html>
